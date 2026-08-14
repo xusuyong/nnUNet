@@ -86,7 +86,16 @@ def visualize(
         img_path_normal = os.path.join(raw_img_dir, f)
         img_path = img_path_0000 if os.path.exists(img_path_0000) else (img_path_normal if os.path.exists(img_path_normal) else None)
 
-        gt_path = os.path.join(gt_mask_dir, f) if (gt_mask_dir and os.path.exists(os.path.join(gt_mask_dir, f))) else None
+        gt_candidates = [f]
+        if f.endswith('_0000.png'):
+            gt_candidates.append(f.replace('_0000.png', '.png'))
+        gt_path = None
+        if gt_mask_dir:
+            for gt_f in gt_candidates:
+                candidate = os.path.join(gt_mask_dir, gt_f)
+                if os.path.exists(candidate):
+                    gt_path = candidate
+                    break
         pred_path = os.path.join(pred_dir, f)
 
         if not img_path:

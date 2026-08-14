@@ -48,11 +48,15 @@ def convert_dataset(
     src_dir: str,
     dataset_id: int = 1,
     dataset_name_str: str = "CustomDataset",
-    labels_dict: dict = None
+    labels_dict: dict = None,
+    out_dir: str = None
 ):
-    nnUNet_raw = os.environ.get("nnUNet_raw", "/home/xsy/pythoncode/nnUNet_raw")
     dataset_name = f"Dataset{dataset_id:03d}_{dataset_name_str}"
-    target_dir = join(nnUNet_raw, dataset_name)
+    if out_dir is None:
+        out_dir = os.environ.get(
+            "nnUNet_raw", os.path.dirname(os.path.abspath(src_dir))
+        )
+    target_dir = join(out_dir, dataset_name)
 
     imagesTr = join(target_dir, "imagesTr")
     labelsTr = join(target_dir, "labelsTr")
@@ -135,9 +139,10 @@ if __name__ == "__main__":
     parser.add_argument("--src_dir", type=str, required=True, help="原始数据集根目录")
     parser.add_argument("--dataset_id", type=int, default=1, help="nnU-Net Dataset ID (默认: 1)")
     parser.add_argument("--dataset_name", type=str, default="SEM", help="nnU-Net 数据集名称")
+    parser.add_argument("--out_dir", type=str, default=None, help="输出目录，默认在原数据集同目录下")
     parser.add_argument("--labels", type=str, default=None, help='JSON 格式类别映射，如 \'{"background":0,"cat":1,"dog":2}\'')
 
     args = parser.parse_args()
     labels = json.loads(args.labels) if args.labels else None
 
-    convert_dataset(args.src_dir, args.dataset_id, args.dataset_name, labels)
+    convert_dataset(args.src_dir, args.dataset_id, args.dataset_name, labels, args.out_dir)
