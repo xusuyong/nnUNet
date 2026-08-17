@@ -107,11 +107,27 @@ def main():
         convert_dataset(args.src_dir, args.dataset_id, out_dir=args.out_dir)
 
     elif args.action == "preprocess":
-        run_command(["nnUNetv2_plan_and_preprocess", "-d", str(args.dataset_id), "--verify_dataset_integrity"])
+        run_command(
+            [
+                "nnUNetv2_plan_and_preprocess",
+                "-d",
+                str(args.dataset_id),
+                "-pl",
+                "ResEncUNetPlanner",
+                "--verify_dataset_integrity",
+            ]
+        )
 
     elif args.action == "train":
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
-        cmd = ["nnUNetv2_train", str(args.dataset_id), args.config, str(args.fold)]
+        cmd = [
+            "nnUNetv2_train",
+            str(args.dataset_id),
+            args.config,
+            str(args.fold),
+            "-p",
+            "nnUNetResEncUNetPlans",
+        ]
 
         trainer_name = args.tr
         if not trainer_name and args.epochs:

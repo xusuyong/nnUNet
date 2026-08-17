@@ -1,9 +1,6 @@
 # nnU-Net 环境配置
 # 修改此文件后重新运行命令即生效；也可通过 run_nnunet.py --config 指定其它配置文件
-nnUNet_raw: E:/xsy/pythoncode/xsy_datasets/nnUNet_data/nnUNet_raw
-nnUNet_preprocessed: E:/xsy/pythoncode/xsy_datasets/nnUNet_data/nnUNet_preprocessed
-nnUNet_results: E:/xsy/pythoncode/xsy_datasets/nnUNet_data/nnUNet_results
-# 禁用 torch.compile 避免 Triton C 编译器报错
-nnUNet_compile: False
-# 数据增强进程数（每张图很大时调小，避免内存不足；默认 12）
-nnUNet_n_proc_DA: 4
+nnUNet_raw: /home/xsy/pythoncode/xsy_datasets/nnUNet_data/nnUNet_raw
+nnUNet_preprocessed: /home/xsy/pythoncode/xsy_datasets/nnUNet_data/nnUNet_preprocessed
+nnUNet_results: /home/xsy/pythoncode/xsy_datasets/nnUNet_data/nnUNet_results
+

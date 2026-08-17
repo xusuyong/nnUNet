@@ -14,34 +14,59 @@ from nnunetv2.dataset_conversion.generate_dataset_json import generate_dataset_j
 
 
 def parse_names_txt(names_path: str) -> dict:
-    """尝试解析 unet_format 中的 names.txt 文件获取类别名称映射"""
-    labels = {"background": 0}
-    if not os.path.exists(names_path):
-        return labels
+    """尝试解析 names.txt / data.yaml 获取类别名称映射"""
+    if not names_path or not os.path.exists(names_path):
+        return {"background": 0}
 
+    labels = {}
     try:
         import yaml
         with open(names_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
             if isinstance(data, dict) and "names" in data:
                 names = data["names"]
-                labels = {}
-                for k, v in names.items():
-                    labels[str(v)] = int(k)
-                return labels
+                if isinstance(names, dict):
+                    for k, v in names.items():
+                        labels[str(v)] = int(k)
+                elif isinstance(names, list):
+                    if any("background" in str(x).lower() for x in names):
+                        for idx, name in enumerate(names):
+                            labels[str(name)] = idx
+                    else:
+                        labels["background"] = 0
+                        for idx, name in enumerate(names, start=1):
+                            labels[str(name)] = idx
+                if labels:
+                    if "background" not in labels and 0 not in labels.values():
+                        labels = {"background": 0, **labels}
+                    return labels
     except Exception:
         pass
 
     # 简易文本解析后备逻辑
+    labels = {}
     with open(names_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            if ":" in line and not line.startswith("names"):
-                parts = line.split(":")
-                idx = int(parts[0].strip())
-                name = parts[1].strip()
-                labels[name] = idx
-    return labels
+            if not line or line.startswith("#") or line.startswith("names:"):
+                continue
+            if ":" in line:
+                parts = line.split(":", 1)
+                k = parts[0].strip()
+                v = parts[1].strip()
+                if k.isdigit():
+                    labels[v] = int(k)
+                elif v.isdigit():
+                    labels[k] = int(v)
+            else:
+                labels[line] = len(labels) + (1 if "background" not in labels else 0)
+
+    if labels:
+        if "background" not in labels and 0 not in labels.values():
+            labels = {"background": 0, **labels}
+        return labels
+
+    return {"background": 0}
 
 
 def convert_dataset(
@@ -70,9 +95,19 @@ def convert_dataset(
 
     # 自动解析类别标签
     if labels_dict is None:
-        names_path = join(src_dir, "masks", "train", "names.txt")
-        if not os.path.exists(names_path):
-            names_path = join(src_dir, "masks", "names.txt")
+        candidate_paths = [
+            join(src_dir, "names.txt"),
+            join(src_dir, "data.yaml"),
+            join(src_dir, "classes.txt"),
+            join(src_dir, "masks", "names.txt"),
+            join(src_dir, "masks", "train", "names.txt"),
+        ]
+        names_path = None
+        for p in candidate_paths:
+            if os.path.exists(p):
+                names_path = p
+                break
+
         labels_dict = parse_names_txt(names_path)
 
     print(f"📋 使用的类别标签定义: {labels_dict}")

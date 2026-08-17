@@ -120,3 +120,5 @@ CLAUDE.md
 AGENTS.md
 
 scratch/
+*.onnx
+*.onnx.data
