@@ -69,6 +69,18 @@ def parse_names_txt(names_path: str) -> dict:
     return {"background": 0}
 
 
+def find_image_file(img_dir: str, base_name: str) -> str:
+    """按常见图片后缀查找对应图像文件"""
+    if not os.path.exists(img_dir):
+        return None
+    extensions = [".bmp", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".BMP", ".PNG", ".JPG", ".JPEG", ".TIF", ".TIFF"]
+    for ext in extensions:
+        candidate = join(img_dir, base_name + ext)
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
 def convert_dataset(
     src_dir: str,
     dataset_id: int = 1,
@@ -112,49 +124,52 @@ def convert_dataset(
 
     print(f"📋 使用的类别标签定义: {labels_dict}")
 
+    supported_exts = ('.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff', '.PNG', '.JPG', '.JPEG', '.BMP', '.TIF', '.TIFF')
+
     # 1. 转换训练集
     train_img_dir = join(src_dir, "images", "train")
     train_mask_dir = join(src_dir, "masks", "train")
 
     train_count = 0
     if os.path.exists(train_mask_dir):
-        train_files = [f for f in os.listdir(train_mask_dir) if f.endswith(".png")]
+        train_files = [f for f in os.listdir(train_mask_dir) if f.endswith(supported_exts)]
         print(f"正在转换训练集，共 {len(train_files)} 张图像...")
 
         for idx, mask_name in enumerate(sorted(train_files)):
             base_name = os.path.splitext(mask_name)[0]
             case_id = f"case_train_{idx:04d}"
 
-            # 支持 jpg, png, tif
-            jpg_path = join(train_img_dir, base_name + ".jpg")
-            png_path = join(train_img_dir, base_name + ".png")
-            img_src = jpg_path if os.path.exists(jpg_path) else (png_path if os.path.exists(png_path) else None)
-
+            img_src = find_image_file(train_img_dir, base_name)
             if img_src:
                 img = Image.open(img_src).convert("RGB")
                 img.save(join(imagesTr, f"{case_id}_0000.png"))
-                shutil.copy(join(train_mask_dir, mask_name), join(labelsTr, f"{case_id}.png"))
+                mask = Image.open(join(train_mask_dir, mask_name))
+                mask.save(join(labelsTr, f"{case_id}.png"))
                 train_count += 1
+            else:
+                print(f"⚠️ 警告: 未能在 {train_img_dir} 中找到与 mask [{mask_name}] 匹配的原图！")
 
     # 2. 转换验证集/测试集 (可选)
     val_img_dir = join(src_dir, "images", "val")
     val_mask_dir = join(src_dir, "masks", "val")
 
+    val_count = 0
     if os.path.exists(val_mask_dir):
-        val_files = [f for f in os.listdir(val_mask_dir) if f.endswith(".png")]
+        val_files = [f for f in os.listdir(val_mask_dir) if f.endswith(supported_exts)]
         print(f"正在转换验证/测试集，共 {len(val_files)} 张图像...")
         for idx, mask_name in enumerate(sorted(val_files)):
             base_name = os.path.splitext(mask_name)[0]
             case_id = f"case_val_{idx:04d}"
 
-            jpg_path = join(val_img_dir, base_name + ".jpg")
-            png_path = join(val_img_dir, base_name + ".png")
-            img_src = jpg_path if os.path.exists(jpg_path) else (png_path if os.path.exists(png_path) else None)
-
+            img_src = find_image_file(val_img_dir, base_name)
             if img_src:
                 img = Image.open(img_src).convert("RGB")
                 img.save(join(imagesTs, f"{case_id}_0000.png"))
-                shutil.copy(join(val_mask_dir, mask_name), join(labelsTs, f"{case_id}.png"))
+                mask = Image.open(join(val_mask_dir, mask_name))
+                mask.save(join(labelsTs, f"{case_id}.png"))
+                val_count += 1
+            else:
+                print(f"⚠️ 警告: 未能在 {val_img_dir} 中找到与 mask [{mask_name}] 匹配的原图！")
 
     # 3. 生成 dataset.json 元数据
     generate_dataset_json(
